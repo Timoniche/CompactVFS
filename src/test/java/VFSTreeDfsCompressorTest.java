@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.util.List;
 import java.util.Set;
 
+import com.compactvfs.VFSTreeDfsCompressor;
 import com.compactvfs.model.VFSDirectory;
 import com.compactvfs.model.VFSFile;
 import junitparams.JUnitParamsRunner;
