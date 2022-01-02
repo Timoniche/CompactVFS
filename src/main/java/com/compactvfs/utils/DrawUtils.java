@@ -23,11 +23,15 @@ public class DrawUtils {
                 .stream()
                 .map(subFile -> TAB.repeat(tabsCount + 1) + DASHES_TAB + subFile.getName() + NEXT_LINE)
                 .collect(joining());
-        return "" +
-                dirNameIndent + "Directory: " + vfsDirectory.getName() + NEXT_LINE +
-                TAB.repeat(tabsCount + 1) + "SubDirectories: " + NEXT_LINE +
-                nestedDirsTree +
-                TAB.repeat(tabsCount + 1) + "SubFiles: " + NEXT_LINE +
-                subFileNames;
+
+        StringBuilder outputBuilder = new StringBuilder();
+        outputBuilder.append(dirNameIndent).append("Directory: ").append(vfsDirectory.getName()).append(NEXT_LINE);
+        if (!nestedDirsTree.isEmpty()) {
+            outputBuilder.append(TAB.repeat(tabsCount + 1)).append("SubDirectories: ").append(NEXT_LINE).append(nestedDirsTree);
+        }
+        if (!subFileNames.isEmpty()) {
+            outputBuilder.append(TAB.repeat(tabsCount + 1)).append("SubFiles: ").append(NEXT_LINE).append(subFileNames);
+        }
+        return outputBuilder.toString();
     }
 }
