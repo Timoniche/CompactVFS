@@ -11,12 +11,15 @@ import java.util.stream.Stream;
 import com.compactvfs.model.VFSDirectory;
 import com.compactvfs.model.VFSFile;
 
-import static com.compactvfs.utils.DrawUtils.toTreeString;
+import static com.compactvfs.model.VFSDirectory.ROOT_PREFIX_PATH;
 
 public class FSAdapter {
-    private static final String BASE_PATH = System.getProperty("user.dir");
 
-    public static VFSDirectory fromFS(Path dirPath, String vfsPath) {
+    public static VFSDirectory fromFS(Path dirPath) {
+        return fromFS(dirPath, ROOT_PREFIX_PATH + dirPath.getFileName());
+    }
+
+    private static VFSDirectory fromFS(Path dirPath, String vfsPath) {
         VFSDirectory rootVfsDirectory = new VFSDirectory(vfsPath, new TreeSet<>(), new TreeSet<>());
         try (Stream<Path> subPaths = Files.list(dirPath)) {
             subPaths.forEach(
@@ -27,9 +30,16 @@ public class FSAdapter {
                             VFSDirectory childVfsDirectory = fromFS(curPath, curVfsPath);
                             rootVfsDirectory.getSubDirectories().add(childVfsDirectory);
                         } else {
-                            rootVfsDirectory.getSubFiles().add(
-                                  new VFSFile(curVfsPath)
-                            );
+                            try {
+                                byte[] fileContent = Files.readAllBytes(curPath);
+                                VFSFile vfsFile = new VFSFile(curVfsPath);
+                                vfsFile.setContent(fileContent);
+                                rootVfsDirectory.getSubFiles().add(vfsFile);
+                            } catch (IOException ex) {
+                                System.out.println("Can't load content from path: " +
+                                        curPath + ", file will be missed in FS, ex: " + ex.getMessage()
+                                );
+                            }
                         }
                     }
             );
@@ -40,8 +50,28 @@ public class FSAdapter {
         return rootVfsDirectory;
     }
 
-    public static void main(String[] args) {
-        VFSDirectory vfs = fromFS(Paths.get(BASE_PATH + "/src"), "root/src");
-        System.out.println(toTreeString(vfs));
+    public static void toFS(VFSDirectory vfsDirectory, Path dirPath) {
+        toFSHelper(vfsDirectory, Paths.get(dirPath.toString(), vfsDirectory.getName()));
     }
+
+    private static void toFSHelper(VFSDirectory vfsDirectory, Path rootDirPath) {
+        try {
+            Files.createDirectories(rootDirPath);
+            for (VFSFile vfsSubFile : vfsDirectory.getSubFiles()) {
+                Path fsSubFilePath = Paths.get(rootDirPath + "/" + vfsSubFile.getName());
+                try {
+                    Files.write(fsSubFilePath, vfsSubFile.getContent());
+                } catch (IOException ex) {
+                    System.out.println("Can't write to/create file with path " + fsSubFilePath);
+                }
+            }
+            for (VFSDirectory vfsSubDirectory : vfsDirectory.getSubDirectories()) {
+                Path fsSubDirPath = Paths.get(rootDirPath + "/" + vfsSubDirectory.getName());
+                toFSHelper(vfsSubDirectory, fsSubDirPath);
+            }
+        } catch (IOException ex) {
+            System.out.println("Can't create directory with path " + rootDirPath);
+        }
+    }
+
 }

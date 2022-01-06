@@ -5,6 +5,8 @@ import java.util.Set;
 import java.util.TreeSet;
 
 public class VFSDirectory implements Comparable<VFSDirectory> {
+    public static final String ROOT_PREFIX_PATH = "root/";
+
     private final Set<VFSDirectory> subDirectories;
     private final Set<VFSFile> subFiles;
 
