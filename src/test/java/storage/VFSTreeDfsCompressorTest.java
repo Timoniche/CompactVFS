@@ -1,11 +1,8 @@
 package storage;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.Set;
@@ -37,10 +34,9 @@ public class VFSTreeDfsCompressorTest {
             String compressFilePath = BASE_PATH + "/__storage/" + outFileName;
             File fileCompressTo = new File(compressFilePath);
             Files.createDirectories(fileCompressTo.getParentFile().toPath());
-            try (FileOutputStream fileOutputStream = new FileOutputStream(fileCompressTo, false)) {
-                try (ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream)) {
-                    VFSTreeDfsCompressor.compress(objectOutputStream, vfsDirectory);
-                }
+            try (RandomAccessFile randomAccessFile = new RandomAccessFile(fileCompressTo.getPath(), "rw")) {
+                randomAccessFile.setLength(0);
+                VFSTreeDfsCompressor.compress(randomAccessFile, vfsDirectory);
             }
         } catch (IOException ex) {
             System.out.println("Compress ex occurred: " + ex.getMessage());
@@ -54,11 +50,9 @@ public class VFSTreeDfsCompressorTest {
         try {
             String compressFilePath = BASE_PATH + "/__storage/" + inputFileName;
             File fileCompressTo = new File(compressFilePath);
-            try (FileInputStream fileInputStream = new FileInputStream(fileCompressTo)) {
-                try (ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream)) {
-                    VFSDirectory vfsDirectory = VFSTreeDfsCompressor.decompress(objectInputStream);
-                    System.out.println(toTreeString(vfsDirectory));
-                }
+            try (RandomAccessFile randomAccessFile = new RandomAccessFile(fileCompressTo.getPath(), "rw")) {
+                VFSDirectory vfsDirectory = VFSTreeDfsCompressor.decompress(randomAccessFile);
+                System.out.println(toTreeString(vfsDirectory));
             }
         } catch (IOException | ClassNotFoundException ex) {
             System.out.println("Decompress ex occurred: " + ex.getMessage());
@@ -73,18 +67,16 @@ public class VFSTreeDfsCompressorTest {
             String compressFilePath = BASE_PATH + "/__storage/" + outFileName;
             File fileCompressTo = new File(compressFilePath);
             Files.createDirectories(fileCompressTo.getParentFile().toPath());
-            try (FileOutputStream fileOutputStream = new FileOutputStream(fileCompressTo, false)) {
-                try (ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream)) {
-                    VFSTreeDfsCompressor.compress(objectOutputStream, vfsDirectory);
-                }
+            try (RandomAccessFile randomAccessFile = new RandomAccessFile(fileCompressTo.getPath(), "rw")) {
+                randomAccessFile.setLength(0);
+                VFSTreeDfsCompressor.compress(randomAccessFile, vfsDirectory);
             }
-            try (FileInputStream fileInputStream = new FileInputStream(fileCompressTo)) {
-                try (ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream)) {
-                    VFSDirectory vfsDirectoryBackup = VFSTreeDfsCompressor.decompress(objectInputStream);
-                    System.out.println(toTreeString(vfsDirectory));
 
-                    assertTrue(vfsDirectory.compareStructure(vfsDirectoryBackup));
-                }
+            try (RandomAccessFile randomAccessFile = new RandomAccessFile(fileCompressTo.getPath(), "rw")) {
+                VFSDirectory vfsDirectoryBackup = VFSTreeDfsCompressor.decompress(randomAccessFile);
+                System.out.println(toTreeString(vfsDirectory));
+
+                assertTrue(vfsDirectory.compareStructure(vfsDirectoryBackup));
             }
         } catch (IOException | ClassNotFoundException ex) {
             System.out.println("Compress-Decompress ex occurred: " + ex.getMessage());

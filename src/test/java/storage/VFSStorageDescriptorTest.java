@@ -1,6 +1,7 @@
 package storage;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -49,7 +50,14 @@ public class VFSStorageDescriptorTest {
             VFSDirectory rootVfsDir = vfs.getRootVFSDirectory();
             System.out.println(toTreeString(rootVfsDir));
             VFSStorageDescriptor vfsStorageDescriptor = vfs.getVfsStorageDescriptor();
+            System.out.println("---File content positions---");
             System.out.println(vfsStorageDescriptor.getFileContentPosition());
+            for (VFSFile vfsFile : rootVfsDir.getSubFiles()) {
+                System.out.println(vfsFile);
+                byte[] fileContent = vfsStorageDescriptor.readFileContent(vfsFile);
+                String content = new String(fileContent, StandardCharsets.UTF_8);
+                System.out.println(content);
+            }
         } catch (IOException ex) {
             System.out.println("Can't load descriptor from path: " + descriptorPath + " ex: " + ex.getMessage());
             fail();
@@ -76,7 +84,6 @@ public class VFSStorageDescriptorTest {
 
         Path simpleFSPathToStore = Paths.get(BASE_PATH, "__storage/descriptors");
 
-
         return new Object[][]{
                 {
                         simpleFSPathToStore,
@@ -89,7 +96,6 @@ public class VFSStorageDescriptorTest {
     @SuppressWarnings("unused")
     Object[][] pathVfsProvider() {
         Path simpleFSPathToStore = Paths.get(BASE_PATH, "__storage/descriptors");
-
 
         return new Object[][]{
                 {
