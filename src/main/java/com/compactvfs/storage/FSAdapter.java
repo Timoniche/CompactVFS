@@ -1,4 +1,4 @@
-package com.compactvfs;
+package com.compactvfs.storage;
 
 import java.io.File;
 import java.io.IOException;
@@ -11,12 +11,12 @@ import java.util.stream.Stream;
 import com.compactvfs.model.VFSDirectory;
 import com.compactvfs.model.VFSFile;
 
-import static com.compactvfs.model.VFSDirectory.ROOT_PREFIX_PATH;
+import static com.compactvfs.model.VFSDirectory.VFS_PREFIX_PATH;
 
 public class FSAdapter {
 
     public static VFSDirectory fromFS(Path dirPath) {
-        return fromFS(dirPath, ROOT_PREFIX_PATH + dirPath.getFileName());
+        return fromFS(dirPath, VFS_PREFIX_PATH + dirPath.getFileName());
     }
 
     private static VFSDirectory fromFS(Path dirPath, String vfsPath) {

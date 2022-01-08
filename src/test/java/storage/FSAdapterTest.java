@@ -1,3 +1,5 @@
+package storage;
+
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -8,7 +10,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.Set;
 
-import com.compactvfs.FSAdapter;
+import com.compactvfs.storage.FSAdapter;
 import com.compactvfs.model.VFSDirectory;
 import com.compactvfs.model.VFSFile;
 import junitparams.JUnitParamsRunner;
@@ -18,8 +20,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
 
-import static com.compactvfs.FSAdapter.toFS;
-import static com.compactvfs.model.VFSDirectory.ROOT_PREFIX_PATH;
+import static com.compactvfs.storage.FSAdapter.toFS;
+import static com.compactvfs.model.VFSDirectory.VFS_PREFIX_PATH;
 import static com.compactvfs.utils.DrawUtils.toTreeString;
 import static junit.framework.TestCase.fail;
 
@@ -73,12 +75,12 @@ public class FSAdapterTest {
     @SuppressWarnings("unused")
     Object[][] vfsProvider() throws IOException {
         VFSFile file1 = new VFSFile(
-                ROOT_PREFIX_PATH + "simpleFS/file1.txt"
+                VFS_PREFIX_PATH + "simpleFS/file1.txt"
         );
         byte[] file1Content = Files.readAllBytes(Paths.get(BASE_PATH, "/src/test/filesystems/simpleFS/file1.txt"));
         file1.setContent(file1Content);
         VFSDirectory simpleVFS = new VFSDirectory(
-                ROOT_PREFIX_PATH + "simpleFS",
+                VFS_PREFIX_PATH + "simpleFS",
                 Set.of(),
                 Set.of(file1)
         );

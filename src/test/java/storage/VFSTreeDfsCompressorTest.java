@@ -1,3 +1,5 @@
+package storage;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -8,7 +10,7 @@ import java.nio.file.Files;
 import java.util.List;
 import java.util.Set;
 
-import com.compactvfs.VFSTreeDfsCompressor;
+import com.compactvfs.storage.VFSTreeDfsCompressor;
 import com.compactvfs.model.VFSDirectory;
 import com.compactvfs.model.VFSFile;
 import junitparams.JUnitParamsRunner;
@@ -32,7 +34,7 @@ public class VFSTreeDfsCompressorTest {
     @Parameters(method = "vfsProvider")
     public void test1_compress(VFSDirectory vfsDirectory, String outFileName) {
         try {
-            String compressFilePath = BASE_PATH + "/storage/" + outFileName;
+            String compressFilePath = BASE_PATH + "/__storage/" + outFileName;
             File fileCompressTo = new File(compressFilePath);
             Files.createDirectories(fileCompressTo.getParentFile().toPath());
             try (FileOutputStream fileOutputStream = new FileOutputStream(fileCompressTo, false)) {
@@ -50,7 +52,7 @@ public class VFSTreeDfsCompressorTest {
     @Parameters(method = "vfsNamesProvider")
     public void test2_decompress(String inputFileName) {
         try {
-            String compressFilePath = BASE_PATH + "/storage/" + inputFileName;
+            String compressFilePath = BASE_PATH + "/__storage/" + inputFileName;
             File fileCompressTo = new File(compressFilePath);
             try (FileInputStream fileInputStream = new FileInputStream(fileCompressTo)) {
                 try (ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream)) {
@@ -68,7 +70,7 @@ public class VFSTreeDfsCompressorTest {
     @Parameters(method = "vfsProvider")
     public void test3_compressDecompress(VFSDirectory vfsDirectory, String outFileName) {
         try {
-            String compressFilePath = BASE_PATH + "/storage/" + outFileName;
+            String compressFilePath = BASE_PATH + "/__storage/" + outFileName;
             File fileCompressTo = new File(compressFilePath);
             Files.createDirectories(fileCompressTo.getParentFile().toPath());
             try (FileOutputStream fileOutputStream = new FileOutputStream(fileCompressTo, false)) {
@@ -93,40 +95,40 @@ public class VFSTreeDfsCompressorTest {
     @SuppressWarnings("unused")
     Object[][] vfsProvider() {
         VFSDirectory simpleDir = new VFSDirectory(
-                "root/simpleDir",
+                "~/vfs/simpleDir",
                 Set.of(),
                 Set.of(
-                        new VFSFile("root/simpleDir/file1"),
-                        new VFSFile("root/simpleDir/file2"),
-                        new VFSFile("root/simpleDir/file3")
+                        new VFSFile("~/vfs/simpleDir/file1"),
+                        new VFSFile("~/vfs/simpleDir/file2"),
+                        new VFSFile("~/vfs/simpleDir/file3")
                 )
         );
         VFSDirectory nestedDir = new VFSDirectory(
-                "root/nestedDir",
+                "~/vfs/nestedDir",
                 Set.of(
                         new VFSDirectory(
-                                "root/nestedDir/nestedA",
+                                "~/vfs/nestedDir/nestedA",
                                 Set.of(),
                                 Set.of(
-                                        new VFSFile("root/nestedDir/nestedA/file11"),
-                                        new VFSFile("root/nestedDir/nestedA/file12"),
-                                        new VFSFile("root/nestedDir/nestedA/file13")
+                                        new VFSFile("~/vfs/nestedDir/nestedA/file11"),
+                                        new VFSFile("~/vfs/nestedDir/nestedA/file12"),
+                                        new VFSFile("~/vfs/nestedDir/nestedA/file13")
                                 )
                         ),
                         new VFSDirectory(
-                                "root/nestedDir/nestedB",
+                                "~/vfs/nestedDir/nestedB",
                                 Set.of(),
                                 Set.of(
-                                        new VFSFile("root/nestedDir/nestedB/file21"),
-                                        new VFSFile("root/nestedDir/nestedB/file22"),
-                                        new VFSFile("root/nestedDir/nestedB/file23")
+                                        new VFSFile("~/vfs/nestedDir/nestedB/file21"),
+                                        new VFSFile("~/vfs/nestedDir/nestedB/file22"),
+                                        new VFSFile("~/vfs/nestedDir/nestedB/file23")
                                 )
                         )
                 ),
                 Set.of(
-                        new VFSFile("root/nestedDir/file01"),
-                        new VFSFile("root/nestedDir/file02"),
-                        new VFSFile("root/nestedDir/file03")
+                        new VFSFile("~/vfs/nestedDir/file01"),
+                        new VFSFile("~/vfs/nestedDir/file02"),
+                        new VFSFile("~/vfs/nestedDir/file03")
                 )
         );
         return new Object[][]{

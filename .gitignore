@@ -171,3 +171,4 @@ buildNumber.properties
 # End of https://www.toptal.com/developers/gitignore/api/maven,macos,java,intellij+all
 /storage/
 /src/test/decodedFilesystems/
+/__storage/

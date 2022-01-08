@@ -1,4 +1,4 @@
-package com.compactvfs;
+package com.compactvfs.storage;
 
 import java.io.IOException;
 import java.io.ObjectInput;
