@@ -100,6 +100,7 @@ public class VFSStorageDescriptor {
         }
     }
 
+    // os dependent FileChannel.write (Windows can't be parallelized?)
     public void writeNewFileContentInTheEnd(
             String vfsFilePath,
             byte[] newContent

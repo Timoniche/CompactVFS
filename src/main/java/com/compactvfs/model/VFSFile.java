@@ -1,7 +1,12 @@
 package com.compactvfs.model;
 
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 public class VFSFile implements Comparable<VFSFile> {
     private String path;
+
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     public VFSFile(String path) {
         this.path = path;
@@ -9,6 +14,11 @@ public class VFSFile implements Comparable<VFSFile> {
 
     public String getPath() {
         return path;
+    }
+
+    //todo: encapsulate in VFS
+    public ReadWriteLock getLock() {
+        return lock;
     }
 
     @SuppressWarnings("unused")
@@ -20,6 +30,16 @@ public class VFSFile implements Comparable<VFSFile> {
         int index = path.lastIndexOf('/');
         return path.substring(index + 1);
     }
+
+    public String getParentDir() {
+        return getParentDir(path);
+    }
+
+    public static String getParentDir(String filePath) {
+        int index = filePath.lastIndexOf('/');
+        return filePath.substring(0, index);
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {

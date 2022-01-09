@@ -44,7 +44,7 @@ public class FSAdapter {
                 String curVfsPath = vfsPath + "/" + curFile.getName();
                 if (Files.isDirectory(curPath)) {
                     VFSDirectory childVfsDirectory = fromFS(curPath, curVfsPath, storage);
-                    rootVfsDirectory.getSubDirectories().add(childVfsDirectory);
+                    rootVfsDirectory.addSubDirectory(childVfsDirectory);
                 } else {
                     try {
                         byte[] fileContent = Files.readAllBytes(curPath);
@@ -52,7 +52,7 @@ public class FSAdapter {
 
                         storage.writeNewFileContentInTheEnd(vfsFile.getPath(), fileContent);
 
-                        rootVfsDirectory.getSubFiles().add(vfsFile);
+                        rootVfsDirectory.addSubFile(vfsFile);
                     } catch (IOException ex) {
                         System.out.println("Can't load content from path: " +
                                 curPath + ", file will be missed in FS, ex: " + ex.getMessage()
@@ -74,7 +74,7 @@ public class FSAdapter {
             for (VFSFile vfsSubFile : vfs.getRootVFSDirectory().getSubFiles()) {
                 Path fsSubFilePath = Paths.get(rootDirPath + "/" + vfsSubFile.getName());
                 try {
-                    Files.write(fsSubFilePath, vfs.getVfsStorageDescriptor().readFileContent(vfsSubFile.getPath()));
+                    Files.write(fsSubFilePath, vfs.readBytesFrom(vfsSubFile));
                 } catch (IOException ex) {
                     System.out.println("Can't write to/create file with path " + fsSubFilePath);
                 }

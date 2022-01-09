@@ -31,7 +31,7 @@ public class VFSStorageDescriptorTest {
         try {
             VFS vfs = FSAdapter.fromFS(fsPath, descriptorDirPath);
             System.out.println(toTreeString(vfs.getRootVFSDirectory()));
-            System.out.println(vfs.getVfsStorageDescriptor().getFileContentPosition());
+            System.out.println(vfs.getFilesContentBytePositions());
         } catch (IOException ex) {
             System.out.println("Can't load VFS from FS, fsPath: " + fsPath + " descriptorPath: " + descriptorDirPath +
                     " ex: " + ex.getMessage());
@@ -46,12 +46,11 @@ public class VFSStorageDescriptorTest {
             VFS vfs = VFSStorageDescriptor.load(descriptorPath);
             VFSDirectory rootVfsDir = vfs.getRootVFSDirectory();
             System.out.println(toTreeString(rootVfsDir));
-            VFSStorageDescriptor vfsStorageDescriptor = vfs.getVfsStorageDescriptor();
             System.out.println("---File content positions---");
-            System.out.println(vfsStorageDescriptor.getFileContentPosition());
+            System.out.println(vfs.getFilesContentBytePositions());
             for (VFSFile vfsFile : rootVfsDir.getSubFiles()) {
                 System.out.println(vfsFile);
-                byte[] fileContent = vfsStorageDescriptor.readFileContent(vfsFile.getPath());
+                byte[] fileContent = vfs.readBytesFrom(vfsFile);
                 String content = new String(fileContent, StandardCharsets.UTF_8);
                 System.out.println(content);
             }
