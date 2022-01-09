@@ -2,12 +2,11 @@ package storage;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Set;
 
 import com.compactvfs.model.VFS;
+import com.compactvfs.storage.FSAdapter;
 import com.compactvfs.storage.VFSStorageDescriptor;
 import com.compactvfs.model.VFSDirectory;
 import com.compactvfs.model.VFSFile;
@@ -18,7 +17,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
 
-import static com.compactvfs.model.VFSDirectory.VFS_PREFIX_PATH;
 import static com.compactvfs.utils.DrawUtils.toTreeString;
 import static junit.framework.TestCase.fail;
 
@@ -28,16 +26,15 @@ public class VFSStorageDescriptorTest {
     private final String BASE_PATH = System.getProperty("user.dir");
 
     @Test
-    @Parameters(method = "storePathAndVfsProvider")
-    public void test1_saveVfs(Path pathToStore, VFSDirectory vfsDirectory) {
-        System.out.println(toTreeString(vfsDirectory));
+    @Parameters(method = "pathProvider")
+    public void test1_saveVfs(Path fsPath, Path descriptorDirPath) {
         try {
-            Files.createDirectories(pathToStore);
-            VFSStorageDescriptor descriptor = VFSStorageDescriptor.save(vfsDirectory, pathToStore);
-            System.out.println("---File content positions---");
-            System.out.println(descriptor.getFileContentPosition());
+            VFS vfs = FSAdapter.fromFS(fsPath, descriptorDirPath);
+            System.out.println(toTreeString(vfs.getRootVFSDirectory()));
+            System.out.println(vfs.getVfsStorageDescriptor().getFileContentPosition());
         } catch (IOException ex) {
-            System.out.println("Can't save vfs to path: " + pathToStore + " ex: " + ex.getMessage());
+            System.out.println("Can't load VFS from FS, fsPath: " + fsPath + " descriptorPath: " + descriptorDirPath +
+                    " ex: " + ex.getMessage());
             fail();
         }
     }
@@ -54,7 +51,7 @@ public class VFSStorageDescriptorTest {
             System.out.println(vfsStorageDescriptor.getFileContentPosition());
             for (VFSFile vfsFile : rootVfsDir.getSubFiles()) {
                 System.out.println(vfsFile);
-                byte[] fileContent = vfsStorageDescriptor.readFileContent(vfsFile);
+                byte[] fileContent = vfsStorageDescriptor.readFileContent(vfsFile.getPath());
                 String content = new String(fileContent, StandardCharsets.UTF_8);
                 System.out.println(content);
             }
@@ -65,29 +62,14 @@ public class VFSStorageDescriptorTest {
     }
 
     @SuppressWarnings("unused")
-    Object[][] storePathAndVfsProvider() throws IOException {
-        VFSFile file1 = new VFSFile(
-                VFS_PREFIX_PATH + "simpleFS2/file1.txt"
-        );
-        VFSFile file2 = new VFSFile(
-                VFS_PREFIX_PATH + "simpleFS2/file2.txt"
-        );
-        byte[] file1Content = Files.readAllBytes(Paths.get(BASE_PATH, "/src/test/filesystems/simpleFS2/file1.txt"));
-        byte[] file2Content = Files.readAllBytes(Paths.get(BASE_PATH, "/src/test/filesystems/simpleFS2/file2.txt"));
-        file1.setContent(file1Content);
-        file2.setContent(file2Content);
-        VFSDirectory simpleVFS2 = new VFSDirectory(
-                VFS_PREFIX_PATH + "simpleFS2",
-                Set.of(),
-                Set.of(file1, file2)
-        );
-
-        Path simpleFSPathToStore = Paths.get(BASE_PATH, "__storage/descriptors");
+    Object[][] pathProvider() {
+        Path simpleFS2 = Paths.get(BASE_PATH, "src/test/filesystems/simpleFS2");
+        Path descriptorDirPath = Paths.get(BASE_PATH, "__storage/descriptors");
 
         return new Object[][]{
                 {
-                        simpleFSPathToStore,
-                        simpleVFS2
+                        simpleFS2,
+                        descriptorDirPath
                 }
         };
     }

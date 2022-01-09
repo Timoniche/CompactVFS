@@ -2,7 +2,6 @@ package com.compactvfs.model;
 
 public class VFSFile implements Comparable<VFSFile> {
     private String path;
-    private byte[] content;
 
     public VFSFile(String path) {
         this.path = path;
@@ -15,14 +14,6 @@ public class VFSFile implements Comparable<VFSFile> {
     @SuppressWarnings("unused")
     public void setPath(String path) {
         this.path = path;
-    }
-
-    public byte[] getContent() {
-        return content;
-    }
-
-    public void setContent(byte[] content) {
-        this.content = content;
     }
 
     public String getName() {

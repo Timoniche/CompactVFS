@@ -2,14 +2,14 @@ package com.compactvfs.storage;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Stack;
 
 import com.compactvfs.model.VFS;
 import com.compactvfs.model.VFSDirectory;
-import com.compactvfs.model.VFSFile;
 
 import static com.compactvfs.storage.VFSTreeDfsCompressor.readObject;
 import static com.compactvfs.storage.VFSTreeDfsCompressor.writeObject;
@@ -21,53 +21,41 @@ public class VFSStorageDescriptor {
     private VFSStorageDescriptor(
             Path dirPathToStore,
             String fileName
-    ) {
-        storagePath = dirPathToStore.toString() + "/" + fileName;
+    ) throws IOException {
+        Files.createDirectories(dirPathToStore);
+        storagePath = dirPathToStore + "/" + fileName;
         fileContentPosition = new HashMap<>();
     }
 
-    private VFSStorageDescriptor(String filePath) {
+    private VFSStorageDescriptor(String filePath) throws IOException {
+        Files.createDirectories(Paths.get(filePath).getParent());
         fileContentPosition = new HashMap<>();
         storagePath = filePath;
     }
 
-    public static VFSStorageDescriptor save(VFSDirectory vfsDirectory, Path dirPathToStore) throws IOException {
+    public static VFSStorageDescriptor initTreeFrom(VFSDirectory vfsDirectory, Path dirPathToStore) throws IOException {
         VFSStorageDescriptor vfsStorageDescriptor = new VFSStorageDescriptor(
                 dirPathToStore,
                 "descriptor_" + vfsDirectory.getName() + ".ser"
         );
-
-        Stack<VFSDirectory> dfsStack = new Stack<>();
-        dfsStack.push(vfsDirectory);
-
         try (RandomAccessFile randomAccessFile = new RandomAccessFile(vfsStorageDescriptor.storagePath, "rw")) {
             randomAccessFile.setLength(0);
-
-            VFSTreeDfsCompressor.compress(randomAccessFile, vfsDirectory);
-
-            while (!dfsStack.isEmpty()) {
-                VFSDirectory currentDir = dfsStack.pop();
-
-                for (VFSFile subFile : currentDir.getSubFiles()) {
-                    try {
-                        vfsStorageDescriptor.writeFileContent(
-                                subFile,
-                                vfsStorageDescriptor.getFileContentPosition(),
-                                randomAccessFile
-                        );
-                    } catch (IOException ex) {
-                        System.out.println("File skipped. Can't store file with path: " + subFile.getPath());
-                    }
-                }
-
-                for (VFSDirectory subDir : currentDir.getSubDirectories()) {
-                    dfsStack.push(subDir);
-                }
-            }
-
+            vfsStorageDescriptor.writeVfsTree(vfsDirectory, randomAccessFile);
         }
-
         return vfsStorageDescriptor;
+    }
+
+    public void clearStorage() throws IOException {
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(storagePath, "rw")) {
+            randomAccessFile.setLength(0);
+        }
+    }
+
+    private void writeVfsTree(
+            VFSDirectory vfsDirectory,
+            RandomAccessFile storage
+    ) throws IOException {
+        VFSTreeDfsCompressor.compress(storage, vfsDirectory);
     }
 
     public static VFS load(Path descriptorPath) throws IOException {
@@ -75,7 +63,7 @@ public class VFSStorageDescriptor {
 
         VFSDirectory vfsDirectory;
 
-        try (RandomAccessFile randomAccessFile = new RandomAccessFile(vfsStorageDescriptor.storagePath, "rw")) {
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(vfsStorageDescriptor.storagePath, "r")) {
             try {
                 vfsDirectory = VFSTreeDfsCompressor.decompress(randomAccessFile);
                 readFileContentPositionMap(
@@ -97,12 +85,12 @@ public class VFSStorageDescriptor {
         return fileContentPosition;
     }
 
-    public byte[] readFileContent(VFSFile vfsFile) throws IOException {
+    public byte[] readFileContent(String vfsFilePath) throws IOException {
         // fseek (from C) under the hood + sparse files are usually supported
-        try (RandomAccessFile storage = new RandomAccessFile(storagePath, "rw")) {
-            Long fileContentPos = fileContentPosition.get(vfsFile.getPath());
+        try (RandomAccessFile storage = new RandomAccessFile(storagePath, "r")) {
+            Long fileContentPos = fileContentPosition.get(vfsFilePath);
             if (fileContentPos == null) {
-                throw new IOException("No vfsFile content with path: " + vfsFile.getPath());
+                throw new IOException("No vfsFile content with path: " + vfsFilePath);
             }
             storage.seek(fileContentPos);
             int contentBytesCount = storage.readInt();
@@ -112,23 +100,24 @@ public class VFSStorageDescriptor {
         }
     }
 
-    private void writeFileContent(
-            VFSFile vfsFile,
-            Map<String, Long> fileContentPosition,
-            RandomAccessFile storage
+    public void writeNewFileContentInTheEnd(
+            String vfsFilePath,
+            byte[] newContent
     ) throws IOException {
-        String vfsFilePath = vfsFile.getPath();
+        try (RandomAccessFile storage = new RandomAccessFile(storagePath, "rw")) {
+            long endPos = storage.length();
+            storage.seek(endPos);
 
-        writeObject(storage, vfsFilePath);
+            writeObject(storage, vfsFilePath);
 
-        long currentPosition = storage.getChannel().position();
-        fileContentPosition.put(
-                vfsFilePath,
-                currentPosition
-        );
+            fileContentPosition.put(
+                    vfsFilePath,
+                    storage.getChannel().position()
+            );
 
-        storage.writeInt(vfsFile.getContent().length);
-        storage.write(vfsFile.getContent(), 0, vfsFile.getContent().length);
+            storage.writeInt(newContent.length);
+            storage.write(newContent, 0, newContent.length);
+        }
     }
 
     private static void readFileContentPositionMap(

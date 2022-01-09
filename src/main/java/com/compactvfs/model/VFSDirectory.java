@@ -1,7 +1,10 @@
 package com.compactvfs.model;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
+import java.util.Stack;
 import java.util.TreeSet;
 
 public class VFSDirectory implements Comparable<VFSDirectory> {
@@ -16,6 +19,14 @@ public class VFSDirectory implements Comparable<VFSDirectory> {
         this.path = path;
         this.subDirectories = subDirectories;
         this.subFiles = subFiles;
+    }
+
+    public static VFSDirectory emptyWithPath(String path) {
+        return new VFSDirectory(
+                path,
+                new TreeSet<>(),
+                new TreeSet<>()
+        );
     }
 
     public Set<VFSDirectory> getSubDirectories() {
@@ -38,6 +49,20 @@ public class VFSDirectory implements Comparable<VFSDirectory> {
     public String getName() {
         int index = path.lastIndexOf('/');
         return path.substring(index + 1);
+    }
+
+    public List<VFSFile> getAllSubFilesRecursive() {
+        List<VFSFile> allSubFiles = new ArrayList<>();
+        Stack<VFSDirectory> dfsStack = new Stack<>();
+        dfsStack.push(this);
+        while (!dfsStack.isEmpty()) {
+            VFSDirectory currentDir = dfsStack.pop();
+            allSubFiles.addAll(currentDir.getSubFiles());
+            for (VFSDirectory subDir : currentDir.getSubDirectories()) {
+                dfsStack.push(subDir);
+            }
+        }
+        return allSubFiles;
     }
 
     @Override

@@ -10,9 +10,11 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.Set;
 
+import com.compactvfs.model.VFS;
 import com.compactvfs.storage.FSAdapter;
 import com.compactvfs.model.VFSDirectory;
 import com.compactvfs.model.VFSFile;
+import com.compactvfs.storage.VFSStorageDescriptor;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.junit.FixMethodOrder;
@@ -22,6 +24,7 @@ import org.junit.runners.MethodSorters;
 
 import static com.compactvfs.storage.FSAdapter.toFS;
 import static com.compactvfs.model.VFSDirectory.VFS_PREFIX_PATH;
+import static com.compactvfs.storage.VFSStorageDescriptor.initTreeFrom;
 import static com.compactvfs.utils.DrawUtils.toTreeString;
 import static junit.framework.TestCase.fail;
 
@@ -32,26 +35,26 @@ public class FSAdapterTest {
 
     @Test
     @Parameters(method = "pathProvider")
-    public void test1_fromFS(Path fsPath) {
-        VFSDirectory vfsDirectory = FSAdapter.fromFS(fsPath);
-        System.out.println(toTreeString(vfsDirectory));
+    public void test1_fromFS(Path fsPath, Path descriptorDirPath) throws IOException {
+        VFS vfs = FSAdapter.fromFS(fsPath, descriptorDirPath);
+        System.out.println(toTreeString(vfs.getRootVFSDirectory()));
     }
 
     @Test
     @Parameters(method = "vfsProvider")
-    public void test2_toFS(VFSDirectory vfsDirectory) {
+    public void test2_toFS(VFS vfs) {
         Path pathToStore = Paths.get(BASE_PATH, "src/test/decodedFilesystems");
-        toFS(vfsDirectory, pathToStore);
+        toFS(vfs, pathToStore);
         System.out.println("Decoded FS is stored at " + pathToStore);
     }
 
     @Test
     @Parameters(method = "pathProvider")
-    public void test3_fromToFs(Path fsPath) {
-        VFSDirectory vfsDirectory = FSAdapter.fromFS(fsPath);
-        System.out.println(toTreeString(vfsDirectory));
+    public void test3_fromToFs(Path fsPath, Path descriptorDirPath) throws IOException {
+        VFS vfs = FSAdapter.fromFS(fsPath, descriptorDirPath);
+        System.out.println(toTreeString(vfs.getRootVFSDirectory()));
         Path pathToStore = Paths.get(BASE_PATH, "src/test/decodedFilesystems");
-        toFS(vfsDirectory, pathToStore);
+        toFS(vfs, pathToStore);
         System.out.println("Decoded FS is stored at " + pathToStore);
         try {
             verifyDirsAreEqual(fsPath, Paths.get(pathToStore + "/" + fsPath.getFileName()));
@@ -64,10 +67,12 @@ public class FSAdapterTest {
     @SuppressWarnings("unused")
     Object[][] pathProvider() {
         Path simpleFS = Paths.get(BASE_PATH, "src/test/filesystems/simpleFS");
+        Path descriptorPath = Paths.get(BASE_PATH, "/__storage/descriptors");
 
         return new Object[][]{
                 {
-                        simpleFS
+                        simpleFS,
+                        descriptorPath
                 }
         };
     }
@@ -77,14 +82,20 @@ public class FSAdapterTest {
         VFSFile file1 = new VFSFile(
                 VFS_PREFIX_PATH + "simpleFS/file1.txt"
         );
-        byte[] file1Content = Files.readAllBytes(Paths.get(BASE_PATH, "/src/test/filesystems/simpleFS/file1.txt"));
-        file1.setContent(file1Content);
-        VFSDirectory simpleVFS = new VFSDirectory(
+        VFSDirectory simpleVFSDir = new VFSDirectory(
                 VFS_PREFIX_PATH + "simpleFS",
                 Set.of(),
                 Set.of(file1)
         );
 
+        VFSStorageDescriptor vfsStorageDescriptor = initTreeFrom(
+                simpleVFSDir,
+                Paths.get(BASE_PATH, "/__storage/descriptors")
+        );
+        byte[] file1Content = Files.readAllBytes(Paths.get(BASE_PATH, "/src/test/filesystems/simpleFS/file1.txt"));
+        vfsStorageDescriptor.writeNewFileContentInTheEnd(file1.getPath(), file1Content);
+
+        VFS simpleVFS = new VFS(simpleVFSDir, vfsStorageDescriptor);
         return new Object[][]{
                 {
                         simpleVFS
