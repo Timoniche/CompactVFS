@@ -17,6 +17,8 @@ import static com.compactvfs.storage.VFSTreeDfsCompressor.readObject;
 import static com.compactvfs.storage.VFSTreeDfsCompressor.writeObject;
 
 public class VFSStorageDescriptor {
+    private static final int BYTES_FOR_TREE = 100_000;
+
     private final Map<String, List<Long>> fileContentChunkPositions;
     private final String storagePath;
 
@@ -43,6 +45,10 @@ public class VFSStorageDescriptor {
         try (RandomAccessFile randomAccessFile = new RandomAccessFile(vfsStorageDescriptor.storagePath, "rw")) {
             randomAccessFile.setLength(0);
             vfsStorageDescriptor.writeVfsTree(vfsDirectory, randomAccessFile);
+            int curBytesForTree = (int) randomAccessFile.length();
+            randomAccessFile.writeInt(curBytesForTree);
+            byte[] zerosGap = new byte[BYTES_FOR_TREE - curBytesForTree - Integer.BYTES];
+            randomAccessFile.write(zerosGap, 0, zerosGap.length);
         }
         return vfsStorageDescriptor;
     }
@@ -68,6 +74,9 @@ public class VFSStorageDescriptor {
         try (RandomAccessFile randomAccessFile = new RandomAccessFile(vfsStorageDescriptor.storagePath, "r")) {
             try {
                 vfsDirectory = VFSTreeDfsCompressor.decompress(randomAccessFile);
+                int treeBytesCnt = randomAccessFile.readInt();
+                byte[] zerosGap = new byte[BYTES_FOR_TREE - treeBytesCnt - Integer.BYTES];
+                randomAccessFile.read(zerosGap, 0, zerosGap.length);
                 readFileContentPositionMap(
                         vfsStorageDescriptor.getFileContentChunkPositions(),
                         randomAccessFile

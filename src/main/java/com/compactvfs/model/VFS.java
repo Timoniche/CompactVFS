@@ -151,7 +151,7 @@ public class VFS {
 
         try (VFSInputStream vfsInputStream = vfsStorageDescriptor.readFileContent(vfsFile.getPath())) {
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            int n = 6;
+            int n = 1000;
             byte[] b = new byte[n];
             int bytesRead;
             do {

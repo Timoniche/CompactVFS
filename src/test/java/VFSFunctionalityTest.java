@@ -65,7 +65,8 @@ public class VFSFunctionalityTest {
         Runnable writeFile1 = () -> {
             try {
                 System.out.println("writing file1");
-                vfs.writeBytesToNewFile(simpleFSFile1, content1);
+                @SuppressWarnings("unused")
+                boolean ignored1 = vfs.writeBytesToNewFile(simpleFSFile1, content1);
             } catch (IOException ex) {
                 System.out.println(ex.getMessage());
             }
@@ -139,7 +140,8 @@ public class VFSFunctionalityTest {
         VFS vfs = FSAdapter.fromFS(fsPath, descriptorDirPath);
         VFSFile simpleFSFile1 = vfs.getFileByPath(VFS_PREFIX_PATH + "nestedFS/simpleFS/file1.txt");
 
-        vfs.writeBytesToTheEndOfFile(simpleFSFile1, "aaaaaaa".getBytes(StandardCharsets.UTF_8));
+        @SuppressWarnings("unused")
+        boolean ignored = vfs.writeBytesToTheEndOfFile(simpleFSFile1, "aaaaaaa".getBytes(StandardCharsets.UTF_8));
 
         int n = 100;
         byte[] b = new byte[n];
@@ -152,7 +154,8 @@ public class VFSFunctionalityTest {
         System.out.println(content);
         System.out.println(bytesCount);
 
-        vfs.writeBytesToTheEndOfFile(simpleFSFile1, "bbbbbbb".getBytes(StandardCharsets.UTF_8));
+        @SuppressWarnings("unused")
+        boolean ignored2 = vfs.writeBytesToTheEndOfFile(simpleFSFile1, "bbbbbbb".getBytes(StandardCharsets.UTF_8));
 
         n = 100;
         b = new byte[n];
