@@ -29,8 +29,10 @@ public class FSAdapter {
         VFSStorageDescriptor retDescriptor = initTreeFrom(retTree, descriptorDirPath);
         for (VFSFile file : retTree.getAllSubFilesRecursive()) {
             String filePath = file.getPath();
-            byte[] fileContent = contentAccumulator.readFileContent(filePath).readAllBytes();
-            retDescriptor.writeNewFileContentInTheEnd(filePath, fileContent);
+            try (VFSInputStream inputStream = contentAccumulator.readFileContent(filePath)) {
+                byte[] fileContent = inputStream.readAllBytes();
+                retDescriptor.writeNewFileContentInTheEnd(filePath, fileContent);
+            }
         }
         contentAccumulator.clearStorage();
         return new VFS(retTree, retDescriptor);
@@ -74,7 +76,10 @@ public class FSAdapter {
             for (VFSFile vfsSubFile : vfs.getRootVFSDirectory().getSubFiles()) {
                 Path fsSubFilePath = Paths.get(rootDirPath + "/" + vfsSubFile.getName());
                 try {
-                    Files.write(fsSubFilePath, vfs.readBytesFrom(vfsSubFile));
+                    byte[] bytesContent = vfs.readBytesFrom(vfsSubFile);
+                    if (bytesContent != null) {
+                        Files.write(fsSubFilePath, bytesContent);
+                    }
                 } catch (IOException ex) {
                     System.out.println("Can't write to/create file with path " + fsSubFilePath);
                 }

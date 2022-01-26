@@ -51,8 +51,10 @@ public class VFSStorageDescriptorTest {
             for (VFSFile vfsFile : rootVfsDir.getSubFiles()) {
                 System.out.println(vfsFile);
                 byte[] fileContent = vfs.readBytesFrom(vfsFile);
-                String content = new String(fileContent, StandardCharsets.UTF_8);
-                System.out.println(content);
+                if (fileContent != null) {
+                    String content = new String(fileContent, StandardCharsets.UTF_8);
+                    System.out.println(content);
+                }
             }
         } catch (IOException ex) {
             System.out.println("Can't load descriptor from path: " + descriptorPath + " ex: " + ex.getMessage());

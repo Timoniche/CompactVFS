@@ -31,7 +31,7 @@ public class VFSInputStream implements AutoCloseable {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() throws IOException {
         storage.close();
     }
 }

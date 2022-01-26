@@ -29,7 +29,7 @@ public class VFS {
         return rootVFSDirectory;
     }
 
-    public void readLockFileAndParents(VFSFile vfsFile, List<VFSDirectory> dirsOnPath) throws IOException {
+    public boolean readLockFileAndParents(VFSFile vfsFile, List<VFSDirectory> dirsOnPath) {
 
         for (int i = 0; i < dirsOnPath.size(); i++) {
             VFSDirectory vfsDirectoryFromRoot = dirsOnPath.get(i);
@@ -40,11 +40,13 @@ public class VFS {
                 );
                 if (!dirLocked) {
                     unlockReadParents(i - 1, dirsOnPath);
-                    throw new IOException("Timeout read lock, vfsFile: " + vfsFile.getPath());
+                    System.out.println("Timeout read lock, vfsFile: " + vfsFile.getPath());
+                    return false;
                 }
             } catch (InterruptedException ex) {
                 unlockReadParents(i - 1, dirsOnPath);
-                throw new IOException("Interrupted read lock, vfsFile: " + vfsFile.getPath() + " ex: " + ex.getMessage());
+                System.out.println("Interrupted read lock, vfsFile: " + vfsFile.getPath() + " ex: " + ex.getMessage());
+                return false;
             }
 
         }
@@ -53,16 +55,19 @@ public class VFS {
             boolean fileLocked = vfsFile.getLock().readLock().tryLock(READLOCK_TIMEOUT_MS, TimeUnit.MILLISECONDS);
             if (!fileLocked) {
                 unlockReadParents(dirsOnPath.size() - 1, dirsOnPath);
-                throw new IOException("Timeout read lock, vfsFile: " + vfsFile.getPath());
+                System.out.println("Timeout read lock, vfsFile: " + vfsFile.getPath());
+                return false;
             }
+            return true;
         } catch (InterruptedException ex) {
             unlockReadParents(dirsOnPath.size() - 1, dirsOnPath);
-            throw new IOException("Interrupted read lock, vfsFile: " + vfsFile.getPath() + " ex: " + ex.getMessage());
+            System.out.println("Interrupted read lock, vfsFile: " + vfsFile.getPath() + " ex: " + ex.getMessage());
+            return false;
         }
 
     }
 
-    public void writeLockFileAndParents(VFSFile vfsFile, List<VFSDirectory> dirsOnPath) throws IOException {
+    public boolean writeLockFileAndParents(VFSFile vfsFile, List<VFSDirectory> dirsOnPath) {
         for (int i = 0; i < dirsOnPath.size(); i++) {
             VFSDirectory vfsDirectoryFromRoot = dirsOnPath.get(i);
             try {
@@ -72,11 +77,13 @@ public class VFS {
                 );
                 if (!dirLocked) {
                     unlockWriteParents(i - 1, dirsOnPath);
-                    throw new IOException("Timeout write lock, vfsFile: " + vfsFile.getPath());
+                    System.out.println("Timeout write lock, vfsFile: " + vfsFile.getPath());
+                    return false;
                 }
             } catch (InterruptedException ex) {
                 unlockWriteParents(i - 1, dirsOnPath);
-                throw new IOException("Interrupted write lock, vfsFile: " + vfsFile.getPath() + " ex: " + ex.getMessage());
+                System.out.println("Interrupted write lock, vfsFile: " + vfsFile.getPath() + " ex: " + ex.getMessage());
+                return false;
             }
 
         }
@@ -85,20 +92,26 @@ public class VFS {
             boolean fileLocked = vfsFile.getLock().writeLock().tryLock(WRITELOCK_TIMEOUT_MS, TimeUnit.MILLISECONDS);
             if (!fileLocked) {
                 unlockWriteParents(dirsOnPath.size() - 1, dirsOnPath);
-                throw new IOException("Timeout write lock, vfsFile: " + vfsFile.getPath());
+                System.out.println("Timeout write lock, vfsFile: " + vfsFile.getPath());
+                return false;
             }
+            return true;
         } catch (InterruptedException ex) {
             unlockWriteParents(dirsOnPath.size() - 1, dirsOnPath);
-            throw new IOException("Interrupted write lock, vfsFile: " + vfsFile.getPath() + " ex: " + ex.getMessage());
+            System.out.println("Interrupted write lock, vfsFile: " + vfsFile.getPath() + " ex: " + ex.getMessage());
+            return false;
         }
     }
 
     public byte[] readBytesFrom(VFSFile vfsFile) throws IOException {
         List<VFSDirectory> dirsOnPath = getDirsFromRootToDir(getParentDir(vfsFile.getPath()));
-        readLockFileAndParents(vfsFile, dirsOnPath);
 
-        try {
-            VFSInputStream vfsInputStream = vfsStorageDescriptor.readFileContent(vfsFile.getPath());
+        boolean locked = readLockFileAndParents(vfsFile, dirsOnPath);
+        if (!locked) {
+            return null;
+        }
+
+        try (VFSInputStream vfsInputStream = vfsStorageDescriptor.readFileContent(vfsFile.getPath())) {
             return vfsInputStream.readAllBytes();
         } finally {
             vfsFile.getLock().readLock().unlock();
@@ -118,11 +131,15 @@ public class VFS {
         }
     }
 
-    public void writeBytesTo(VFSFile vfsFile, byte[] content) throws IOException {
+    public boolean writeBytesTo(VFSFile vfsFile, byte[] content) throws IOException {
         List<VFSDirectory> dirsOnPath = getDirsFromRootToDir(getParentDir(vfsFile.getPath()));
-        writeLockFileAndParents(vfsFile, dirsOnPath);
+        boolean locked = writeLockFileAndParents(vfsFile, dirsOnPath);
+        if (!locked) {
+            return false;
+        }
         try {
             vfsStorageDescriptor.writeNewFileContentInTheEnd(vfsFile.getPath(), content);
+            return true;
         } finally {
             vfsFile.getLock().writeLock().unlock();
             unlockWriteParents(dirsOnPath.size() - 1, dirsOnPath);
