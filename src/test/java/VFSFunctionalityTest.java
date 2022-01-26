@@ -20,7 +20,6 @@ import static com.compactvfs.model.VFSDirectory.VFS_PREFIX_PATH;
 import static com.compactvfs.utils.DrawUtils.toTreeString;
 import static java.util.concurrent.CompletableFuture.runAsync;
 import static junit.framework.TestCase.assertEquals;
-import static junit.framework.TestCase.assertTrue;
 
 @RunWith(JUnitParamsRunner.class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)

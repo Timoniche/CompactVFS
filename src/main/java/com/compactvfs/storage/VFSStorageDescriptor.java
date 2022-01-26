@@ -5,7 +5,9 @@ import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.compactvfs.model.VFS;
@@ -15,7 +17,7 @@ import static com.compactvfs.storage.VFSTreeDfsCompressor.readObject;
 import static com.compactvfs.storage.VFSTreeDfsCompressor.writeObject;
 
 public class VFSStorageDescriptor {
-    private final Map<String, Long> fileContentPosition;
+    private final Map<String, List<Long>> fileContentChunkPositions;
     private final String storagePath;
 
     private VFSStorageDescriptor(
@@ -24,12 +26,12 @@ public class VFSStorageDescriptor {
     ) throws IOException {
         Files.createDirectories(dirPathToStore);
         storagePath = dirPathToStore + "/" + fileName;
-        fileContentPosition = new HashMap<>();
+        fileContentChunkPositions = new HashMap<>();
     }
 
     private VFSStorageDescriptor(String filePath) throws IOException {
         Files.createDirectories(Paths.get(filePath).getParent());
-        fileContentPosition = new HashMap<>();
+        fileContentChunkPositions = new HashMap<>();
         storagePath = filePath;
     }
 
@@ -67,7 +69,7 @@ public class VFSStorageDescriptor {
             try {
                 vfsDirectory = VFSTreeDfsCompressor.decompress(randomAccessFile);
                 readFileContentPositionMap(
-                        vfsStorageDescriptor.getFileContentPosition(),
+                        vfsStorageDescriptor.getFileContentChunkPositions(),
                         randomAccessFile
                 );
             } catch (ClassNotFoundException ex) {
@@ -81,23 +83,14 @@ public class VFSStorageDescriptor {
         );
     }
 
-    public Map<String, Long> getFileContentPosition() {
-        return fileContentPosition;
+    public Map<String, List<Long>> getFileContentChunkPositions() {
+        return fileContentChunkPositions;
     }
 
-    public byte[] readFileContent(String vfsFilePath) throws IOException {
+    public VFSInputStream readFileContent(String vfsFilePath) throws IOException {
         // fseek (from C) under the hood + sparse files are usually supported
-        try (RandomAccessFile storage = new RandomAccessFile(storagePath, "r")) {
-            Long fileContentPos = fileContentPosition.get(vfsFilePath);
-            if (fileContentPos == null) {
-                throw new IOException("No vfsFile content with path: " + vfsFilePath);
-            }
-            storage.seek(fileContentPos);
-            int contentBytesCount = storage.readInt();
-            byte[] fileContent = new byte[contentBytesCount];
-            storage.read(fileContent, 0, contentBytesCount);
-            return fileContent;
-        }
+        List<Long> fileContentChunkPoss = fileContentChunkPositions.get(vfsFilePath);
+        return new VFSInputStream(fileContentChunkPoss, storagePath);
     }
 
     // os dependent FileChannel.write (Windows can't be parallelized?)
@@ -111,9 +104,11 @@ public class VFSStorageDescriptor {
 
             writeObject(storage, vfsFilePath);
 
-            fileContentPosition.put(
+            ArrayList<Long> contentPoss = new ArrayList<>();
+            contentPoss.add(storage.getChannel().position());
+            fileContentChunkPositions.put(
                     vfsFilePath,
-                    storage.getChannel().position()
+                    contentPoss
             );
 
             storage.writeInt(newContent.length);
@@ -122,14 +117,16 @@ public class VFSStorageDescriptor {
     }
 
     private static void readFileContentPositionMap(
-            Map<String, Long> fileContentPosition,
+            Map<String, List<Long>> fileContentChunkPositions,
             RandomAccessFile storage
     ) throws IOException, ClassNotFoundException {
         long endPos = storage.length();
         while (storage.getChannel().position() < endPos) {
             String filePath = (String) readObject(storage);
             long currentPosition = storage.getChannel().position();
-            fileContentPosition.put(filePath, currentPosition);
+            fileContentChunkPositions
+                    .computeIfAbsent(filePath, k -> new ArrayList<>())
+                    .add(currentPosition);
             int contentBytesCount = storage.readInt();
             byte[] fileContentIgnored = new byte[contentBytesCount];
             storage.read(fileContentIgnored, 0, contentBytesCount);

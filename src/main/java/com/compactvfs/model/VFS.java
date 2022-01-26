@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import com.compactvfs.storage.VFSInputStream;
 import com.compactvfs.storage.VFSStorageDescriptor;
 
 import static com.compactvfs.model.VFSDirectory.VFS_PREFIX_PATH;
@@ -52,8 +53,7 @@ public class VFS {
             boolean fileLocked = vfsFile.getLock().readLock().tryLock(READLOCK_TIMEOUT_MS, TimeUnit.MILLISECONDS);
             if (!fileLocked) {
                 unlockReadParents(dirsOnPath.size() - 1, dirsOnPath);
-                throw new IOException("t" +
-                        "Timeout read lock, vfsFile: " + vfsFile.getPath());
+                throw new IOException("Timeout read lock, vfsFile: " + vfsFile.getPath());
             }
         } catch (InterruptedException ex) {
             unlockReadParents(dirsOnPath.size() - 1, dirsOnPath);
@@ -98,7 +98,8 @@ public class VFS {
         readLockFileAndParents(vfsFile, dirsOnPath);
 
         try {
-            return vfsStorageDescriptor.readFileContent(vfsFile.getPath());
+            VFSInputStream vfsInputStream = vfsStorageDescriptor.readFileContent(vfsFile.getPath());
+            return vfsInputStream.readAllBytes();
         } finally {
             vfsFile.getLock().readLock().unlock();
             unlockReadParents(dirsOnPath.size() - 1, dirsOnPath);
@@ -128,8 +129,8 @@ public class VFS {
         }
     }
 
-    public Map<String, Long> getFilesContentBytePositions() {
-        return vfsStorageDescriptor.getFileContentPosition();
+    public Map<String, List<Long>> getFilesContentBytePositions() {
+        return vfsStorageDescriptor.getFileContentChunkPositions();
     }
 
     public VFSDirectory getDirByPath(String dirPath) {

@@ -29,7 +29,7 @@ public class FSAdapter {
         VFSStorageDescriptor retDescriptor = initTreeFrom(retTree, descriptorDirPath);
         for (VFSFile file : retTree.getAllSubFilesRecursive()) {
             String filePath = file.getPath();
-            byte[] fileContent = contentAccumulator.readFileContent(filePath);
+            byte[] fileContent = contentAccumulator.readFileContent(filePath).readAllBytes();
             retDescriptor.writeNewFileContentInTheEnd(filePath, fileContent);
         }
         contentAccumulator.clearStorage();
