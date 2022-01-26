@@ -116,6 +116,25 @@ public class VFSStorageDescriptor {
         }
     }
 
+    public void writeBytesToTheEndOfFile(
+            String vfsFilePath,
+            byte[] additionalContent
+    ) throws IOException {
+        try (RandomAccessFile storage = new RandomAccessFile(storagePath, "rw")) {
+            long endPos = storage.length();
+            storage.seek(endPos);
+
+            writeObject(storage, vfsFilePath);
+
+            fileContentChunkPositions
+                    .computeIfAbsent(vfsFilePath, k -> new ArrayList<>())
+                    .add(storage.getChannel().position());
+
+            storage.writeInt(additionalContent.length);
+            storage.write(additionalContent, 0, additionalContent.length);
+        }
+    }
+
     private static void readFileContentPositionMap(
             Map<String, List<Long>> fileContentChunkPositions,
             RandomAccessFile storage

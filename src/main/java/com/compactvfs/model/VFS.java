@@ -1,5 +1,6 @@
 package com.compactvfs.model;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -17,8 +18,8 @@ public class VFS {
     private final VFSDirectory rootVFSDirectory;
     private final VFSStorageDescriptor vfsStorageDescriptor;
 
-    private static final int READLOCK_TIMEOUT_MS = 1;
-    private static final int WRITELOCK_TIMEOUT_MS = 1;
+    private static final int READLOCK_TIMEOUT_MS = 10;
+    private static final int WRITELOCK_TIMEOUT_MS = 10;
 
     public VFS(VFSDirectory rootVFSDirectory, VFSStorageDescriptor vfsStorageDescriptor) {
         this.rootVFSDirectory = rootVFSDirectory;
@@ -119,6 +120,51 @@ public class VFS {
         }
     }
 
+    /**
+     *
+     * @param b size >= n
+     * @return count of read bytes
+     */
+    public int readNBytesFrom(VFSFile vfsFile, byte[] b, int n) throws IOException {
+        List<VFSDirectory> dirsOnPath = getDirsFromRootToDir(getParentDir(vfsFile.getPath()));
+
+        boolean locked = readLockFileAndParents(vfsFile, dirsOnPath);
+        if (!locked) {
+            return 0;
+        }
+
+        try (VFSInputStream vfsInputStream = vfsStorageDescriptor.readFileContent(vfsFile.getPath())) {
+            return vfsInputStream.readNBytes(b, n);
+        } finally {
+            vfsFile.getLock().readLock().unlock();
+            unlockReadParents(dirsOnPath.size() - 1, dirsOnPath);
+        }
+    }
+
+    public byte[] readAllFileBatched(VFSFile vfsFile) throws IOException {
+        List<VFSDirectory> dirsOnPath = getDirsFromRootToDir(getParentDir(vfsFile.getPath()));
+
+        boolean locked = readLockFileAndParents(vfsFile, dirsOnPath);
+        if (!locked) {
+            return null;
+        }
+
+        try (VFSInputStream vfsInputStream = vfsStorageDescriptor.readFileContent(vfsFile.getPath())) {
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            int n = 6;
+            byte[] b = new byte[n];
+            int bytesRead;
+            do {
+                bytesRead = vfsInputStream.readNBytes(b, n);
+                outputStream.write(b, 0, bytesRead);
+            } while (bytesRead == n);
+            return outputStream.toByteArray();
+        } finally {
+            vfsFile.getLock().readLock().unlock();
+            unlockReadParents(dirsOnPath.size() - 1, dirsOnPath);
+        }
+    }
+
     public void unlockReadParents(int fromIndex, List<VFSDirectory> dirsOnPathFromRoot) {
         for (int j = fromIndex; j >= 0; j--) {
             dirsOnPathFromRoot.get(j).getLock().readLock().unlock();
@@ -131,7 +177,7 @@ public class VFS {
         }
     }
 
-    public boolean writeBytesTo(VFSFile vfsFile, byte[] content) throws IOException {
+    public boolean writeBytesToNewFile(VFSFile vfsFile, byte[] content) throws IOException {
         List<VFSDirectory> dirsOnPath = getDirsFromRootToDir(getParentDir(vfsFile.getPath()));
         boolean locked = writeLockFileAndParents(vfsFile, dirsOnPath);
         if (!locked) {
@@ -139,6 +185,21 @@ public class VFS {
         }
         try {
             vfsStorageDescriptor.writeNewFileContentInTheEnd(vfsFile.getPath(), content);
+            return true;
+        } finally {
+            vfsFile.getLock().writeLock().unlock();
+            unlockWriteParents(dirsOnPath.size() - 1, dirsOnPath);
+        }
+    }
+
+    public boolean writeBytesToTheEndOfFile(VFSFile vfsFile, byte[] content) throws IOException {
+        List<VFSDirectory> dirsOnPath = getDirsFromRootToDir(getParentDir(vfsFile.getPath()));
+        boolean locked = writeLockFileAndParents(vfsFile, dirsOnPath);
+        if (!locked) {
+            return false;
+        }
+        try {
+            vfsStorageDescriptor.writeBytesToTheEndOfFile(vfsFile.getPath(), content);
             return true;
         } finally {
             vfsFile.getLock().writeLock().unlock();

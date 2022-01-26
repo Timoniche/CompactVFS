@@ -65,7 +65,7 @@ public class VFSFunctionalityTest {
         Runnable writeFile1 = () -> {
             try {
                 System.out.println("writing file1");
-                vfs.writeBytesTo(simpleFSFile1, content1);
+                vfs.writeBytesToNewFile(simpleFSFile1, content1);
             } catch (IOException ex) {
                 System.out.println(ex.getMessage());
             }
@@ -81,7 +81,7 @@ public class VFSFunctionalityTest {
         Runnable writeFile2 = () -> {
             try {
                 System.out.println("writing file2");
-                vfs.writeBytesTo(simpleFS2File2, content2);
+                vfs.writeBytesToNewFile(simpleFS2File2, content2);
             } catch (IOException ex) {
                 System.out.println(ex.getMessage());
             }
@@ -114,6 +114,77 @@ public class VFSFunctionalityTest {
             future3.join();
             future4.join();
         }
+    }
+
+    @Test
+    @Parameters(method = "pathProvider")
+    public void test3_readNBytes(Path fsPath, Path descriptorDirPath) throws IOException {
+        VFS vfs = FSAdapter.fromFS(fsPath, descriptorDirPath);
+        VFSFile simpleFSFile1 = vfs.getFileByPath(VFS_PREFIX_PATH + "nestedFS/simpleFS/file1.txt");
+        int n = 100;
+        byte[] b = new byte[n];
+        int bytesCount = vfs.readNBytesFrom(
+                simpleFSFile1,
+                b,
+                n
+        );
+        String content = new String(b, StandardCharsets.UTF_8);
+        System.out.println(content);
+        System.out.println(bytesCount);
+    }
+
+    @Test
+    @Parameters(method = "pathProvider")
+    public void test4_writeToEndAndReadNBytes(Path fsPath, Path descriptorDirPath) throws IOException {
+        VFS vfs = FSAdapter.fromFS(fsPath, descriptorDirPath);
+        VFSFile simpleFSFile1 = vfs.getFileByPath(VFS_PREFIX_PATH + "nestedFS/simpleFS/file1.txt");
+
+        vfs.writeBytesToTheEndOfFile(simpleFSFile1, "aaaaaaa".getBytes(StandardCharsets.UTF_8));
+
+        int n = 100;
+        byte[] b = new byte[n];
+        int bytesCount = vfs.readNBytesFrom(
+                simpleFSFile1,
+                b,
+                n
+        );
+        String content = new String(b, StandardCharsets.UTF_8);
+        System.out.println(content);
+        System.out.println(bytesCount);
+
+        vfs.writeBytesToTheEndOfFile(simpleFSFile1, "bbbbbbb".getBytes(StandardCharsets.UTF_8));
+
+        n = 100;
+        b = new byte[n];
+        bytesCount = vfs.readNBytesFrom(
+                simpleFSFile1,
+                b,
+                n
+        );
+        content = new String(b, StandardCharsets.UTF_8);
+        System.out.println(content);
+        System.out.println(bytesCount);
+
+    }
+
+    @Test
+    @Parameters(method = "pathProvider")
+    public void test5_readAllFileBatched(Path fsPath, Path descriptorDirPath) throws IOException {
+        VFS vfs = FSAdapter.fromFS(fsPath, descriptorDirPath);
+        VFSFile simpleFSFile1 = vfs.getFileByPath(VFS_PREFIX_PATH + "nestedFS/simpleFS/file1.txt");
+
+        vfs.writeBytesToTheEndOfFile(simpleFSFile1, "aaaaaaa".getBytes(StandardCharsets.UTF_8));
+
+        byte[] b = vfs.readAllFileBatched(simpleFSFile1);
+        String content = new String(b, StandardCharsets.UTF_8);
+        System.out.println(content);
+
+        vfs.writeBytesToTheEndOfFile(simpleFSFile1, "bbbbbbb".getBytes(StandardCharsets.UTF_8));
+
+        b = vfs.readAllFileBatched(simpleFSFile1);
+        content = new String(b, StandardCharsets.UTF_8);
+        System.out.println(content);
+
     }
 
     @SuppressWarnings("unused")

@@ -31,7 +31,7 @@ public class VFSInputStream implements AutoCloseable {
     public int readNBytes(byte[] b, int n) throws IOException {
         int nChunks = contentChunkPositions.size();
         int bytesLeft = n;
-        while (bytesLeft > 0) {
+        while (bytesLeft >= 0) {
             if (chunkIndex >= nChunks) {
                 seekBegin();
                 return n - bytesLeft;
