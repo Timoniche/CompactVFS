@@ -13,6 +13,7 @@ import java.util.Map;
 import com.compactvfs.model.VFS;
 import com.compactvfs.model.VFSDirectory;
 
+import static com.compactvfs.storage.VFSTreeDfsCompressor.countTreeBytesCount;
 import static com.compactvfs.storage.VFSTreeDfsCompressor.readObject;
 import static com.compactvfs.storage.VFSTreeDfsCompressor.writeObject;
 
@@ -56,6 +57,18 @@ public class VFSStorageDescriptor {
     public void clearStorage() throws IOException {
         try (RandomAccessFile randomAccessFile = new RandomAccessFile(storagePath, "rw")) {
             randomAccessFile.setLength(0);
+        }
+    }
+
+    public void rebuildDfsTree(VFSDirectory vfsDirectory) throws IOException {
+        int bytesTreeCount = countTreeBytesCount(vfsDirectory);
+        if (bytesTreeCount >= BYTES_FOR_TREE - Integer.BYTES) {
+            throw new IllegalArgumentException("VFS Tree too large, change BYTES_FOR_TREE parameter");
+        }
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(storagePath, "rw")) {
+            randomAccessFile.seek(0);
+            int bytesCount = VFSTreeDfsCompressor.compress(randomAccessFile, vfsDirectory);
+            randomAccessFile.writeInt(bytesCount);
         }
     }
 

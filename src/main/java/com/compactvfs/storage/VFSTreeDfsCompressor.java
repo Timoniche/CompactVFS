@@ -13,16 +13,34 @@ import org.apache.commons.lang3.SerializationUtils;
 
 public class VFSTreeDfsCompressor {
 
-    public static void compress(RandomAccessFile out, VFSDirectory rootDirectory) throws IOException {
-        writeObject(out, rootDirectory.getPath());
+    public static int compress(RandomAccessFile out, VFSDirectory rootDirectory) throws IOException {
+        int bytesCnt = 0;
+        bytesCnt += writeObject(out, rootDirectory.getPath());
         out.writeInt(rootDirectory.getSubFiles().size());
+        bytesCnt += Integer.BYTES;
         for (VFSFile file : rootDirectory.getSubFiles()) {
-            writeObject(out, file.getPath());
+            bytesCnt += writeObject(out, file.getPath());
         }
         out.writeInt(rootDirectory.getSubDirectories().size());
+        bytesCnt += Integer.BYTES;
         for (VFSDirectory directory : rootDirectory.getSubDirectories()) {
-            compress(out, directory);
+            bytesCnt += compress(out, directory);
         }
+        return bytesCnt;
+    }
+
+    public static int countTreeBytesCount(VFSDirectory rootDirectory) {
+        int bytesCnt = 0;
+        bytesCnt += bytesCount(rootDirectory.getPath());
+        bytesCnt += Integer.BYTES;
+        for (VFSFile file : rootDirectory.getSubFiles()) {
+            bytesCnt += bytesCount(file.getPath());
+        }
+        bytesCnt += Integer.BYTES;
+        for (VFSDirectory directory : rootDirectory.getSubDirectories()) {
+            bytesCnt += countTreeBytesCount(directory);
+        }
+        return bytesCnt;
     }
 
     public static VFSDirectory decompress(RandomAccessFile in) throws IOException, ClassNotFoundException {
@@ -41,10 +59,19 @@ public class VFSTreeDfsCompressor {
         return new VFSDirectory(rootDirectoryPath, new TreeSet<>(directories), new TreeSet<>(files));
     }
 
-    public static <T extends Serializable> void writeObject(RandomAccessFile out, T object) throws IOException {
+    /**
+     * @return written bytes count
+     */
+    public static <T extends Serializable> int writeObject(RandomAccessFile out, T object) throws IOException {
         byte[] data = SerializationUtils.serialize(object);
         out.writeInt(data.length);
         out.write(data, 0, data.length);
+        return Integer.BYTES + data.length;
+    }
+
+    public static <T extends Serializable> int bytesCount(T object) {
+        byte[] data = SerializationUtils.serialize(object);
+        return Integer.BYTES + data.length;
     }
 
     public static Object readObject(RandomAccessFile in) throws IOException {

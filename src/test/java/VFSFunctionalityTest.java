@@ -9,6 +9,7 @@ import com.compactvfs.model.VFS;
 import com.compactvfs.model.VFSDirectory;
 import com.compactvfs.model.VFSFile;
 import com.compactvfs.storage.FSAdapter;
+import com.compactvfs.storage.VFSStorageDescriptor;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.junit.FixMethodOrder;
@@ -188,6 +189,27 @@ public class VFSFunctionalityTest {
         content = new String(b, StandardCharsets.UTF_8);
         System.out.println(content);
 
+    }
+
+    @Test
+    @Parameters(method = "pathProvider")
+    public void test6_addFileAndStore(Path fsPath, Path descriptorDirPath) throws IOException {
+        VFS vfs = FSAdapter.fromFS(fsPath, descriptorDirPath);
+        System.out.println(toTreeString(vfs.getRootVFSDirectory()));
+        vfs.addFile(
+                "~/vfs/nestedFS/simpleFS2/fileNew.txt",
+                "УРА! НОВЫЙ ФАЙЛ!!".getBytes(StandardCharsets.UTF_8)
+        );
+        System.out.println(toTreeString(vfs.getRootVFSDirectory()));
+        Path pathToStore = Paths.get(BASE_PATH, "src/test/decodedFilesystems");
+        FSAdapter.toFS(vfs, pathToStore);
+    }
+
+    @Test
+    @Parameters(method = "pathProvider")
+    public void test7_addFileLoadAndToFs(Path fsPath, Path descriptorDirPath) throws IOException {
+        VFS vfs = VFSStorageDescriptor.load(Paths.get(descriptorDirPath.toString(), "descriptor_nestedFS.ser"));
+        System.out.println(toTreeString(vfs.getRootVFSDirectory()));
     }
 
     @SuppressWarnings("unused")

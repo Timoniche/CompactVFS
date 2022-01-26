@@ -67,13 +67,13 @@ public class FSAdapter {
     }
 
     public static void toFS(VFS vfs, Path dirPath) {
-        toFSHelper(vfs, Paths.get(dirPath.toString(), vfs.getRootVFSDirectory().getName()));
+        toFSHelper(vfs, vfs.getRootVFSDirectory(), Paths.get(dirPath.toString(), vfs.getRootVFSDirectory().getName()));
     }
 
-    private static void toFSHelper(VFS vfs, Path rootDirPath) {
+    private static void toFSHelper(VFS vfs, VFSDirectory vfsDirectory, Path rootDirPath) {
         try {
             Files.createDirectories(rootDirPath);
-            for (VFSFile vfsSubFile : vfs.getRootVFSDirectory().getSubFiles()) {
+            for (VFSFile vfsSubFile : vfsDirectory.getSubFiles()) {
                 Path fsSubFilePath = Paths.get(rootDirPath + "/" + vfsSubFile.getName());
                 try {
                     byte[] bytesContent = vfs.readBytesFrom(vfsSubFile);
@@ -84,9 +84,9 @@ public class FSAdapter {
                     System.out.println("Can't write to/create file with path " + fsSubFilePath);
                 }
             }
-            for (VFSDirectory vfsSubDirectory : vfs.getRootVFSDirectory().getSubDirectories()) {
+            for (VFSDirectory vfsSubDirectory : vfsDirectory.getSubDirectories()) {
                 Path fsSubDirPath = Paths.get(rootDirPath + "/" + vfsSubDirectory.getName());
-                toFSHelper(vfs, fsSubDirPath);
+                toFSHelper(vfs, vfsSubDirectory, fsSubDirPath);
             }
         } catch (IOException ex) {
             System.out.println("Can't create directory with path " + rootDirPath);

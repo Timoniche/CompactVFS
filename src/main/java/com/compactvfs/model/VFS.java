@@ -207,8 +207,48 @@ public class VFS {
         }
     }
 
+    public boolean addFile(String filePath, byte[] content) {
+        List<VFSDirectory> dirsOnPath = getDirsFromRootToDir(getParentDir(filePath));
+
+        if (writeLockParents(dirsOnPath)) {
+            try {
+                VFSDirectory parentDir = dirsOnPath.get(dirsOnPath.size() - 1);
+                parentDir.addSubFile(new VFSFile(filePath));
+                vfsStorageDescriptor.rebuildDfsTree(rootVFSDirectory);
+                vfsStorageDescriptor.writeNewFileContentInTheEnd(filePath, content);
+                return true;
+            } catch (IOException ex) {
+                System.out.println("VFS is corrupted");
+            } finally {
+                unlockWriteParents(dirsOnPath.size() - 1, dirsOnPath);
+            }
+        }
+        return false;
+
+    }
+
     public Map<String, List<Long>> getFilesContentBytePositions() {
         return vfsStorageDescriptor.getFileContentChunkPositions();
+    }
+
+    public boolean writeLockParents(List<VFSDirectory> dirsOnPath) {
+        for (int i = 0; i < dirsOnPath.size(); i++) {
+            VFSDirectory vfsDirectoryFromRoot = dirsOnPath.get(i);
+            try {
+                boolean dirLocked = vfsDirectoryFromRoot.getLock().writeLock().tryLock(
+                        WRITELOCK_TIMEOUT_MS,
+                        TimeUnit.MILLISECONDS
+                );
+                if (!dirLocked) {
+                    unlockWriteParents(i - 1, dirsOnPath);
+                    return false;
+                }
+            } catch (InterruptedException ex) {
+                unlockWriteParents(i - 1, dirsOnPath);
+                return false;
+            }
+        }
+        return true;
     }
 
     public VFSDirectory getDirByPath(String dirPath) {
